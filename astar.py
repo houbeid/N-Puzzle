@@ -2,13 +2,12 @@ import heapq
 import time
 from PuzzleState import PuzzleState
 
-MAX_TIME = 60  # secondes
+MAX_TIME = 60
 
 def make_goal_pos(goal_tiles, size):
     return {val: divmod(idx, size) for idx, val in enumerate(goal_tiles)}
 
 
-# ── A* classique (3x3) ──────────────────────────────────────────
 def astar(start_tiles, goal_tiles, size, heuristic_fn):
     goal_pos   = make_goal_pos(goal_tiles, size)
     start      = PuzzleState(start_tiles, size, goal_pos, heuristic_fn=heuristic_fn)
@@ -39,7 +38,6 @@ def astar(start_tiles, goal_tiles, size, heuristic_fn):
     return None, time_complexity, space_complexity
 
 
-# ── IDA* (4x4, 5x5+) ────────────────────────────────────────────
 def idastar(start_tiles, goal_tiles, size, heuristic_fn):
     goal_pos   = make_goal_pos(goal_tiles, size)
     start      = PuzzleState(start_tiles, size, goal_pos, heuristic_fn=heuristic_fn)
@@ -62,7 +60,6 @@ def idastar(start_tiles, goal_tiles, size, heuristic_fn):
         if current == goal_state:
             return -1, list(path)
 
-        # Timeout check
         if time.time() - start_time > MAX_TIME:
             return float('inf'), None
 
@@ -72,7 +69,6 @@ def idastar(start_tiles, goal_tiles, size, heuristic_fn):
         minimum  = float('inf')
         prev_tiles = path[-2].tiles if len(path) > 1 else None
 
-        # Trier les voisins par f croissant = meilleur pruning
         neighbors = current.get_neighbors(goal_pos, heuristic_fn)
         neighbors.sort(key=lambda n: n.f)
 

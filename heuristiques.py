@@ -21,8 +21,6 @@ def linear_conflict(state, goal_pos):
     dist = manhattan(state, goal_pos)
     conflicts = 0
     size = state.size
-
-    # Conflits lignes
     for r in range(size):
         row_tiles = [
             (goal_pos[state.tiles[r*size+c]][1], c)
@@ -34,8 +32,6 @@ def linear_conflict(state, goal_pos):
             for j in range(i+1, len(row_tiles)):
                 if (row_tiles[i][1] < row_tiles[j][1]) != (row_tiles[i][0] < row_tiles[j][0]):
                     conflicts += 1
-
-    # Conflits colonnes
     for c in range(size):
         col_tiles = [
             (goal_pos[state.tiles[r*size+c]][0], r)
