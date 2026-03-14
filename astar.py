@@ -8,9 +8,10 @@ def make_goal_pos(goal_tiles, size):
     return {val: divmod(idx, size) for idx, val in enumerate(goal_tiles)}
 
 
-def astar(start_tiles, goal_tiles, size, heuristic_fn):
+def astar(start_tiles, goal_tiles, size, heuristic_fn, mode="astar"):
     goal_pos   = make_goal_pos(goal_tiles, size)
-    start      = PuzzleState(start_tiles, size, goal_pos, heuristic_fn=heuristic_fn)
+    start      = PuzzleState(start_tiles, size, goal_pos, 
+                             heuristic_fn=heuristic_fn, mode=mode)
     goal_state = PuzzleState(goal_tiles, size, goal_pos)
 
     open_heap = [start]
@@ -38,12 +39,13 @@ def astar(start_tiles, goal_tiles, size, heuristic_fn):
     return None, time_complexity, space_complexity
 
 
-def idastar(start_tiles, goal_tiles, size, heuristic_fn):
+def idastar(start_tiles, goal_tiles, size, heuristic_fn, mode="astar"):
     goal_pos   = make_goal_pos(goal_tiles, size)
-    start      = PuzzleState(start_tiles, size, goal_pos, heuristic_fn=heuristic_fn)
+    start      = PuzzleState(start_tiles, size, goal_pos,
+                             heuristic_fn=heuristic_fn, mode=mode)
     goal_state = PuzzleState(goal_tiles, size, goal_pos)
 
-    threshold  = start.h
+    threshold  = start.h if mode != "uniform" else 0
     path       = [start]
     start_time = time.time()
 
@@ -53,7 +55,7 @@ def idastar(start_tiles, goal_tiles, size, heuristic_fn):
     def search(g, threshold):
         nonlocal time_complexity, space_complexity
         current = path[-1]
-        f = g + current.h
+        f = current.f
 
         if f > threshold:
             return f, None
@@ -66,7 +68,7 @@ def idastar(start_tiles, goal_tiles, size, heuristic_fn):
         time_complexity += 1
         space_complexity = max(space_complexity, len(path))
 
-        minimum  = float('inf')
+        minimum    = float('inf')
         prev_tiles = path[-2].tiles if len(path) > 1 else None
 
         neighbors = current.get_neighbors(goal_pos, heuristic_fn)
@@ -85,19 +87,7 @@ def idastar(start_tiles, goal_tiles, size, heuristic_fn):
 
         return minimum, None
 
-    print(f"Initial h    : {start.h}")
-
-    iteration = 0
     while True:
-        iteration += 1
-        elapsed = time.time() - start_time
-        print(f"Iteration {iteration:3d} | threshold={threshold:4d} | "
-              f"states={time_complexity:8d} | elapsed={elapsed:.1f}s")
-
-        if elapsed > MAX_TIME:
-            print(f"\nTimeout after {MAX_TIME}s.")
-            return None, time_complexity, space_complexity
-
         t, result = search(0, threshold)
         if result is not None:
             return result, time_complexity, space_complexity

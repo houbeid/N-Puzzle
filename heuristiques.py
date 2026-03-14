@@ -45,3 +45,7 @@ def linear_conflict(state, goal_pos):
                     conflicts += 1
 
     return dist + 2 * conflicts
+
+def zero_heuristic(state, goal_pos):
+    """Heuristique nulle pour Uniform Cost Search."""
+    return 0

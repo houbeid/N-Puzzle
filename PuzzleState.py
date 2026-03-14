@@ -1,11 +1,19 @@
 class PuzzleState:
-    def __init__(self, tiles, size, goal_pos, parent=None, g=0, heuristic_fn=None):
+    def __init__(self, tiles, size, goal_pos, parent=None, g=0, 
+                 heuristic_fn=None, mode="astar"):
         self.tiles = tiles
         self.size = size
         self.parent = parent
         self.g = g
         self.h = heuristic_fn(self, goal_pos) if heuristic_fn else 0
-        self.f = self.g + self.h
+        self.mode = mode
+
+        if mode == "greedy":
+            self.f = self.h
+        elif mode == "uniform":
+            self.f = self.g
+        else:
+            self.f = self.g + self.h
 
     def __eq__(self, other):
         return self.tiles == other.tiles
@@ -30,7 +38,8 @@ class PuzzleState:
                 neighbors.append(PuzzleState(
                     tuple(new_tiles), self.size, goal_pos,
                     parent=self, g=self.g + 1,
-                    heuristic_fn=heuristic_fn
+                    heuristic_fn=heuristic_fn,
+                    mode=self.mode
                 ))
         return neighbors
 

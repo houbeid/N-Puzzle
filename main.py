@@ -1,16 +1,20 @@
-# main.py
 import sys
 import re
 import argparse
-import random
-from solvability import is_solvable, make_goal
+from solvability import is_solvable
 from astar import astar, idastar
-from heuristiques import manhattan, hamming, linear_conflict
+from heuristiques import manhattan, hamming, linear_conflict, zero_heuristic
 
 HEURISTICS = {
     "manhattan": manhattan,
     "hamming":   hamming,
     "linear":    linear_conflict,
+}
+
+MODES = {
+    "astar":   "A* (g + h)",
+    "greedy":  "Greedy Best-First (h only)",
+    "uniform": "Uniform Cost Search (g only)",
 }
 
 def parse_file(filename):
@@ -42,7 +46,6 @@ def parse_file(filename):
         if len(board) != size:
             raise ValueError(f"Board has {len(board)} rows, expected {size}.")
 
-        # Validation des nombres
         expected = set(range(size * size))
         actual   = set(num for row in board for num in row)
         if actual != expected:
@@ -55,32 +58,6 @@ def parse_file(filename):
         sys.exit(1)
 
 
-def generate_random(size, iterations=10000):
-    """
-    Génère un puzzle solvable en partant du goal
-    et en faisant des moves aléatoires valides.
-    """
-    def swap_empty(p):
-        idx = p.index(0)
-        poss = []
-        if idx % size > 0:       poss.append(idx - 1)
-        if idx % size < size - 1: poss.append(idx + 1)
-        if idx // size > 0:       poss.append(idx - size)
-        if idx // size < size - 1: poss.append(idx + size)
-        swi = random.choice(poss)
-        p[idx], p[swi] = p[swi], p[idx]
-
-    # Partir du goal spirale (garanti solvable)
-    goal = make_goal(size)
-    p = list(num for row in goal for num in row)
-
-    for _ in range(iterations):
-        swap_empty(p)
-
-    board = tuple(tuple(p[i*size:(i+1)*size]) for i in range(size))
-    return size, board
-
-
 def print_board(tiles, size):
     w = len(str(size * size))
     for i in range(size):
@@ -90,11 +67,7 @@ def print_board(tiles, size):
 
 def main():
     parser = argparse.ArgumentParser(description="N-Puzzle Solver using A* / IDA*")
-    
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("file", nargs="?", help="Path to the puzzle file")
-    group.add_argument("-s", "--size", type=int, help="Generate a random puzzle of given size")
-
+    parser.add_argument("file", help="Path to the puzzle file")
     parser.add_argument(
         "-f", "--function",
         choices=HEURISTICS.keys(),
@@ -102,30 +75,30 @@ def main():
         help="Heuristic: manhattan, hamming, linear (default: linear)"
     )
     parser.add_argument(
-        "-i", "--iterations",
-        type=int,
-        default=10000,
-        help="Iterations for random generation (default: 10000)"
+        "-m", "--mode",
+        choices=MODES.keys(),
+        default="astar",
+        help="Search mode: astar, greedy, uniform (default: astar)"
     )
     args = parser.parse_args()
 
-    # 1. Parse ou génération
-    if args.size:
-        if args.size < 3:
-            print("Error: size must be >= 3.")
-            sys.exit(1)
-        print(f"Generating random {args.size}x{args.size} puzzle...")
-        size, board = generate_random(args.size, args.iterations)
-    else:
-        size, board = parse_file(args.file)
 
+    if args.mode == "uniform":
+        heuristic_fn   = zero_heuristic
+        heuristic_name = "zero (uniform cost)"
+    else:
+        heuristic_fn   = HEURISTICS[args.function]
+        heuristic_name = args.function
+
+  
+    size, board = parse_file(args.file)
     start_tiles = tuple(num for row in board for num in row)
 
     print(f"Puzzle Size  : {size}x{size}")
     print("\nInitial State:")
     print_board(start_tiles, size)
 
-    # 2. Solvability
+
     solvable, goal = is_solvable(board, size)
     if not solvable:
         print("This puzzle is unsolvable.")
@@ -136,19 +109,20 @@ def main():
     print("Goal State:")
     print_board(goal_tiles, size)
 
-    # 3. Heuristique
-    heuristic_fn = HEURISTICS[args.function]
-    print(f"Heuristic    : {args.function}")
+    print(f"Heuristic    : {heuristic_name}")
+    print(f"Mode         : {MODES[args.mode]}")
 
-    # 4. Algo selon taille
-    if size <= 3:
+
+    if size <= 3 or args.mode != "astar": 
         print("Algorithm    : A*\n")
-        path, time_c, space_c = astar(start_tiles, goal_tiles, size, heuristic_fn)
+        path, time_c, space_c = astar(start_tiles, goal_tiles, size,
+                                       heuristic_fn, mode=args.mode)
     else:
         print("Algorithm    : IDA*\n")
-        path, time_c, space_c = idastar(start_tiles, goal_tiles, size, heuristic_fn)
+        path, time_c, space_c = idastar(start_tiles, goal_tiles, size,
+                                         heuristic_fn, mode=args.mode)
 
-    # 5. Résultat
+
     if path is None:
         print("No solution found.")
         sys.exit(1)
